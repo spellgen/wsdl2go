@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -110,8 +111,15 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if req.TNSAttr == "" {
 		req.TNSAttr = req.NSAttr
 	}
+
+	x,err := xml.MarshalIndent(req,"","  ")
+	if err != nil {
+		log.Fatalf("error marshalling the request: %s",err)
+	}
+	log.Printf("req=%s",x)
+
 	var b bytes.Buffer
-	err := xml.NewEncoder(&b).Encode(req)
+	err = xml.NewEncoder(&b).Encode(req)
 	if err != nil {
 		return err
 	}
@@ -131,6 +139,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if err != nil {
 		return err
 	}
+
 	defer resp.Body.Close()
 	if c.Post != nil {
 		c.Post(resp)
@@ -139,6 +148,8 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		// read only the first MiB of the body in error case
 		limReader := io.LimitReader(resp.Body, 1024*1024)
 		body, _ := ioutil.ReadAll(limReader)
+
+
 		return &HTTPError{
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,
@@ -148,8 +159,12 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 
 	marshalStructure := struct {
 		XMLName xml.Name `xml:"Envelope"`
-		Body    Message
+		Body    Message 
 	}{Body: out}
+
+	//body, _ := ioutil.ReadAll(resp.Body)
+	//log.Printf("body=%s",string(body))
+
 
 	return xml.NewDecoder(resp.Body).Decode(&marshalStructure)
 }

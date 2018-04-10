@@ -914,7 +914,7 @@ func maskKeywordUsage(code string) string {
 func (ge *goEncoder) genParams(m *wsdl.Message, needsTag bool) []*parameter {
 
 	//x,_:= xml.MarshalIndent(m, "", "  ")
-	//fmt.Printf("%s\n",x)
+	//fmt.Printf("genParams: %s\n",x)
 
 	params := make([]*parameter, len(m.Parts))
 	for i, param := range m.Parts {
@@ -1397,7 +1397,7 @@ func (ge *goEncoder) genOpStructMessage(w io.Writer, d *wsdl.Definitions, name s
 			Name:    part.Name,
 			Type:    wsdlType,
 			// TODO: Maybe one could make guesses about nillable?
-		},true)
+		}, true)
 	}
 
 	fmt.Fprintf(w, "}\n\n")
@@ -1545,7 +1545,12 @@ func (ge *goEncoder) genElementField(w io.Writer, el *wsdl.Element, useType bool
 
 	xmlTag := tag
 	if useType {
-		xmlTag = el.Type[1:]
+		xmlTag = el.Type
+		if strings.Contains(el.Type, "Response") {
+			if strings.Contains(el.Type, ":") {
+				xmlTag = strings.Split(el.Type, ":")[1]
+			}
+		}
 	}
 
 	fmt.Fprintf(w, "%s `xml:\"%s\" json:\"%s\" yaml:\"%s\"`\n",
