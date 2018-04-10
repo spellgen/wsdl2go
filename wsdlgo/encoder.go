@@ -997,6 +997,8 @@ func (ge *goEncoder) wsdl2goType(t string) string {
 		return "int64" // todo: replace this with math/big since integer is infinite set
 	case "long":
 		return "int64"
+	case "unsignedlong":
+		return "uint64"
 	case "float", "double", "decimal":
 		return "float64"
 	case "boolean":
