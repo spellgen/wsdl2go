@@ -912,6 +912,10 @@ func maskKeywordUsage(code string) string {
 }
 
 func (ge *goEncoder) genParams(m *wsdl.Message, needsTag bool) []*parameter {
+
+	//x,_:= xml.MarshalIndent(m, "", "  ")
+	//fmt.Printf("%s\n",x)
+
 	params := make([]*parameter, len(m.Parts))
 	for i, param := range m.Parts {
 		var t, token, elName string
@@ -930,6 +934,7 @@ func (ge *goEncoder) genParams(m *wsdl.Message, needsTag bool) []*parameter {
 			token = trimns(param.Element)
 		}
 		params[i] = &parameter{code: param.Name, dataType: t, xmlToken: token}
+		//fmt.Printf("params[%d]=%+v\n\n",i,params[i])
 		if needsTag {
 			ge.needsStdPkg["encoding/xml"] = true
 			ge.needsTag[strings.TrimPrefix(t, "*")] = elName
@@ -1392,7 +1397,7 @@ func (ge *goEncoder) genOpStructMessage(w io.Writer, d *wsdl.Definitions, name s
 			Name:    part.Name,
 			Type:    wsdlType,
 			// TODO: Maybe one could make guesses about nillable?
-		})
+		},true)
 	}
 
 	fmt.Fprintf(w, "}\n\n")
@@ -1443,7 +1448,7 @@ func (ge *goEncoder) genComplexContent(w io.Writer, d *wsdl.Definitions, ct *wsd
 			}
 		}
 		for _, v := range seq.Elements {
-			ge.genElementField(w, v)
+			ge.genElementField(w, v, false)
 		}
 
 	}
@@ -1452,21 +1457,21 @@ func (ge *goEncoder) genComplexContent(w io.Writer, d *wsdl.Definitions, ct *wsd
 
 func (ge *goEncoder) genElements(w io.Writer, ct *wsdl.ComplexType) error {
 	for _, el := range ct.AllElements {
-		ge.genElementField(w, el)
+		ge.genElementField(w, el, false)
 	}
 	if ct.Sequence != nil {
 		for _, el := range ct.Sequence.Elements {
-			ge.genElementField(w, el)
+			ge.genElementField(w, el, false)
 		}
 		for _, choice := range ct.Sequence.Choices {
 			for _, el := range choice.Elements {
-				ge.genElementField(w, el)
+				ge.genElementField(w, el, false)
 			}
 		}
 	}
 	if ct.Choice != nil {
 		for _, el := range ct.Choice.Elements {
-			ge.genElementField(w, el)
+			ge.genElementField(w, el, false)
 		}
 	}
 	for _, attr := range ct.Attributes {
@@ -1475,7 +1480,11 @@ func (ge *goEncoder) genElements(w io.Writer, ct *wsdl.ComplexType) error {
 	return nil
 }
 
-func (ge *goEncoder) genElementField(w io.Writer, el *wsdl.Element) {
+func (ge *goEncoder) genElementField(w io.Writer, el *wsdl.Element, useType bool) {
+
+	//j,_ := xml.MarshalIndent(el,"","  ")
+	//fmt.Printf("genElementField: el=%s\n\n",j)
+
 	if el.Ref != "" {
 		ref := trimns(el.Ref)
 		nel, ok := ge.elements[ref]
@@ -1533,8 +1542,14 @@ func (ge *goEncoder) genElementField(w io.Writer, el *wsdl.Element) {
 			typ = "*" + typ
 		}
 	}
+
+	xmlTag := tag
+	if useType {
+		xmlTag = el.Type[1:]
+	}
+
 	fmt.Fprintf(w, "%s `xml:\"%s\" json:\"%s\" yaml:\"%s\"`\n",
-		typ, tag, tag, tag)
+		typ, xmlTag, tag, tag)
 }
 
 func (ge *goEncoder) genAttributeField(w io.Writer, attr *wsdl.Attribute) {
